@@ -13144,3 +13144,25 @@ fn parse_alter_table_no_inherit() {
         );
     }
 }
+
+#[test]
+fn parse_grant_maintain() {
+    // https://www.postgresql.org/docs/17/sql-grant.html
+    match pg().verified_stmt("GRANT MAINTAIN ON t TO r") {
+        Statement::Grant(grant) => assert_eq!(
+            grant.privileges,
+            Privileges::Actions(vec![Action::Maintain])
+        ),
+        _ => unreachable!(),
+    }
+    pg().verified_stmt("GRANT SELECT, MAINTAIN ON t TO r WITH GRANT OPTION");
+    pg().verified_stmt("REVOKE MAINTAIN ON t FROM r");
+    pg().verified_stmt("ALTER DEFAULT PRIVILEGES GRANT MAINTAIN ON TABLES TO r");
+
+    assert_eq!(
+        pg().parse_sql_statements("GRANT MAINTAIN (a) ON t TO r")
+            .unwrap_err()
+            .to_string(),
+        "sql parser error: Expected: TO, found: ("
+    );
+}
